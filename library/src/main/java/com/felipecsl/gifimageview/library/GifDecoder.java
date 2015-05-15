@@ -18,9 +18,6 @@
  */
 package com.felipecsl.gifimageview.library;
 
-import android.graphics.Bitmap;
-import android.util.Log;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -28,6 +25,9 @@ import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
+
+import android.graphics.Bitmap;
+import android.util.Log;
 
 /**
  * Reads frame data from a GIF image source and decodes it into individual frames
@@ -148,10 +148,17 @@ public class GifDecoder {
   /**
    * Move the animation frame counter forward
    */
-  public void advance() {
+  public boolean advance() {
     if (frameCount > 0) {
-      framePointer = (framePointer + 1) % frameCount;
+      framePointer = (framePointer + 1);
+      if (loopCount == 0) {
+        framePointer = framePointer % frameCount;
+      } else if (framePointer >= frameCount) {
+        framePointer = 0;
+        return false;
+      }
     }
+    return true;
   }
 
   /**
