@@ -17,23 +17,36 @@
 apply plugin: 'maven-publish'
 apply plugin: 'com.jfrog.bintray'
 
-group = "com.afzaln"
-project.archivesBaseName = "gifimageview"
+def Properties bintrayProps = new Properties()
+File bintrayProperties = file('bintray.properties')
+if (bintrayProperties.exists()) {
+    bintrayProps.load(new FileInputStream(bintrayProperties))
+}
+
+group = bintrayProps['group']
+
+project.archivesBaseName = bintrayProps['baseName']
 project.version = VERSION_NAME
+def pkgName = bintrayProps['pkgName']
+def description = bintrayProps['description']
 
-def pkgName = "GifImageView"
-def pkgPackaging = "aar"
-def description = "Android ImageView that handles animated GIF images"
-def licenceName = "The MIT License (MIT)"
-def licenceUrl = "https://github.com/afzalive/GifImageView/blob/master/LICENSE"
-def licenceDistribution = "repo"
-def developerId = "afzalive"
-def developerName = "Afzal Najam"
-def developerEmail = "afzalnaj@gmail.com"
+def siteUrl = bintrayProps['siteUrl']      // Homepage URL of the library
+def gitUrl = bintrayProps['gitUrl']   // Git repository URL
+def issuesUrl = bintrayProps['issuesUrl']
 
-def siteUrl = 'https://github.com/afzalive/GifImageView'      // Homepage URL of the library
-def gitUrl = 'https://github.com/afzalive/GifImageView.git'   // Git repository URL
+def licenceName = bintrayProps['licenceName']
+def licenceUrl = bintrayProps['licenceUrl']
+def licenceDistribution = bintrayProps['licenceDistribution']
 
+def pkgPackaging = bintrayProps['pkgPackaging']
+def developerId = bintrayProps['developerId']
+def developerName = bintrayProps['developerName']
+def developerEmail = bintrayProps['developerEmail']
+def developerOrg = bintrayProps['developerOrg']
+
+def publishJavadoc = bintrayProps['publishJavadoc']
+def publishSources = bintrayProps['publishSources']
+def publishDownloadNumbers = bintrayProps['publishDownloadNumbers']
 
 task sourcesJar(type: Jar) {
     from android.sourceSets.main.java.srcDirs
@@ -43,6 +56,15 @@ task sourcesJar(type: Jar) {
 task javadoc(type: Javadoc) {
     source = android.sourceSets.main.java.srcDirs
     classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+
+    destinationDir = new File("../javadoc")
+    options {
+        links "http://docs.oracle.com/javase/7/docs/api/"
+        linksOffline "http://d.android.com/reference", "${android.sdkDirectory}/docs/reference"
+        noTimestamp true
+    }
+    exclude '**/BuildConfig.java'
+    exclude '**/R.java'
 }
 
 task javadocJar(type: Jar, dependsOn: javadoc) {
@@ -51,8 +73,12 @@ task javadocJar(type: Jar, dependsOn: javadoc) {
 }
 
 artifacts {
-    archives javadocJar
-    archives sourcesJar
+    if (publishJavadoc){
+        archives javadocJar
+    }
+    if (publishSources) {
+        archives sourcesJar
+    }
 }
 
 def pomConfig = {
@@ -67,7 +93,9 @@ def pomConfig = {
         developer {
             id developerId
             name developerName
-            email developerEmail
+            if (developerEmail) {
+                email developerEmail
+            }
         }
     }
 }
@@ -76,7 +104,7 @@ publishing {
     publications {
         mavenJava(MavenPublication) {
             artifactId project.archivesBaseName
-            version VERSION_NAME
+            version project.version
 
             pom {
                 packaging pkgPackaging
@@ -94,8 +122,8 @@ Properties properties = new Properties()
 properties.load(project.rootProject.file('local.properties').newDataInputStream())
 
 bintray {
-    user = properties.getProperty("bintray.user")
-    key = properties.getProperty("bintray.apikey")
+    user = properties['bintray.user']
+    key = properties['bintray.apikey']
 
     configurations = ['archives']
     publications = ['mavenJava']
@@ -105,16 +133,19 @@ bintray {
 
     pkg {
         repo = "maven"
+        if (developerOrg) {
+            userOrg = developerOrg
+        }
         name = pkgName
         desc = description
         websiteUrl = siteUrl
         vcsUrl = gitUrl
-        licenses = ["Apache-2.0"]
-        publicDownloadNumbers = true
+        issueTrackerUrl = issuesUrl
+        publicDownloadNumbers = publishDownloadNumbers
 
         version {
-            name = VERSION_NAME
-            vcsTag = VERSION_NAME
+            name = project.version
+            vcsTag = project.version
         }
     }
 }
